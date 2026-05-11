@@ -1,5 +1,5 @@
-import type { Workflow } from "../types";
-import { NodeType } from "../types";
+import type { Workflow } from "../types.js";
+import { NodeType } from "../types.js";
 
 export interface WorkflowTemplate {
   id: string;

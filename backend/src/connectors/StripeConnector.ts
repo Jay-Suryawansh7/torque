@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { BaseConnector } from "./BaseConnector";
-import { ConnectorError } from "../core/ConnectorError";
-import type { IOperation, OperationOutput, ConnectionTestResult, AuthConfig } from "../core/interfaces/IConnector";
+import { BaseConnector } from "./BaseConnector.js";
+import { ConnectorError } from "../core/ConnectorError.js";
+import type { IOperation, OperationOutput, ConnectionTestResult, AuthConfig } from "../core/interfaces/IConnector.js";
 
 async function stripeFetch(key: string, method: string, path: string, body?: Record<string, unknown>): Promise<any> {
   const opts: RequestInit = { method, headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/x-www-form-urlencoded" } };

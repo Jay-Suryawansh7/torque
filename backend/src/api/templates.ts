@@ -1,8 +1,8 @@
 import { Router, type Request, type Response } from "express";
-import { WorkflowService } from "../engine/workflow-service";
-import { TEMPLATES, getTemplate } from "../engine/templates";
-import { authMiddleware } from "../auth";
-import { wrap } from "./wrap";
+import { WorkflowService } from "../engine/workflow-service.js";
+import { TEMPLATES, getTemplate } from "../engine/templates.js";
+import { authMiddleware } from "../auth/index.js";
+import { wrap } from "./wrap.js";
 
 export function templatesRouter(_dataDir: string): Router {
   const router = Router();

@@ -1,21 +1,21 @@
-import type { IConnector, IOperation } from "../core/interfaces/IConnector";
-import { HttpConnector } from "./HttpConnector";
-import { CodeConnector } from "./CodeConnector";
-import { TransformConnector } from "./TransformConnector";
-import { GmailConnector } from "./GmailConnector";
-import { SlackConnector } from "./SlackConnector";
-import { GitHubConnector } from "./GitHubConnector";
-import { OpenAIConnector } from "./OpenAIConnector";
-import { StripeConnector } from "./StripeConnector";
-import { RssConnector } from "./RssConnector";
-import { DiscordConnector } from "./DiscordConnector";
-import { AnthropicConnector } from "./AnthropicConnector";
+import type { IConnector, IOperation } from "../core/interfaces/IConnector.js";
+import { HttpConnector } from "./HttpConnector.js";
+import { CodeConnector } from "./CodeConnector.js";
+import { TransformConnector } from "./TransformConnector.js";
+import { GmailConnector } from "./GmailConnector.js";
+import { SlackConnector } from "./SlackConnector.js";
+import { GitHubConnector } from "./GitHubConnector.js";
+import { OpenAIConnector } from "./OpenAIConnector.js";
+import { StripeConnector } from "./StripeConnector.js";
+import { RssConnector } from "./RssConnector.js";
+import { DiscordConnector } from "./DiscordConnector.js";
+import { AnthropicConnector } from "./AnthropicConnector.js";
 import {
   TelegramConnector, NotionConnector, GoogleSheetsConnector, GoogleDocsConnector,
   GoogleCalendarConnector, AirtableConnector, GitLabConnector, JiraConnector,
   LinearConnector, PostgresConnector, MongoConnector, HubSpotConnector,
   SalesforceConnector, S3Connector, GoogleDriveConnector, EmailConnector,
-} from "./batch-connectors";
+} from "./batch-connectors.js";
 
 const _registry = new Map<string, IConnector>();
 function register(ctor: new () => IConnector) { const i = new ctor(); _registry.set(i.id, i); }

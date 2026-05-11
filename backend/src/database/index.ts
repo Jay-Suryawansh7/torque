@@ -1,41 +1,57 @@
-import Database from "better-sqlite3";
-import { join } from "path";
-import { mkdirSync } from "fs";
-import { CREATE_TABLES } from "./schema";
-import { setDb, type Database as DbInterface, type Statement } from "./interface";
+import { Pool } from "pg";
+import { readFileSync, existsSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+import { setDb, type Database, type Statement } from "./interface.js";
 
-let db: Database.Database;
+let pool: Pool | null = null;
 
-class SqliteStatement implements Statement {
-  constructor(private stmt: Database.Statement) {}
-  run(...params: unknown[]): { changes: number } {
-    const result = this.stmt.run(...params);
-    return { changes: result.changes };
+class PgStatement implements Statement {
+  constructor(private queryText: string) {}
+  async run(...params: unknown[]): Promise<{ changes: number }> {
+    if (!pool) return { changes: 0 };
+    try { const r = await pool.query(this.queryText, params); return { changes: r.rowCount ?? 0 }; } catch { return { changes: 0 }; }
   }
-  get(...params: unknown[]): unknown { return this.stmt.get(...params); }
-  all(...params: unknown[]): unknown[] { return this.stmt.all(...params); }
+  async get(...params: unknown[]): Promise<unknown> {
+    if (!pool) return null;
+    try { const r = await pool.query(this.queryText, params); return r.rows.length > 0 ? r.rows[0] : null; } catch { return null; }
+  }
+  async all(...params: unknown[]): Promise<unknown[]> {
+    if (!pool) return [];
+    try { const r = await pool.query(this.queryText, params); return r.rows; } catch { return []; }
+  }
 }
 
-class SqliteDatabase implements DbInterface {
-  constructor(private db: Database.Database) {}
-  prepare(sql: string): Statement { return new SqliteStatement(this.db.prepare(sql)); }
-  exec(sql: string): void { this.db.exec(sql); }
-  close(): void { this.db.close(); }
+class PgDatabase implements Database {
+  prepare(query: string): Statement { return new PgStatement(query); }
+  exec(query: string): void { pool?.query(query).catch(() => {}); }
+  close(): void { pool?.end().catch(() => {}); pool = null; }
 }
 
-export function initDb(dataDir: string): void {
-  mkdirSync(dataDir, { recursive: true });
-  const dbPath = join(dataDir, "torque.db");
-  db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
-  db.exec(CREATE_TABLES);
-  setDb(new SqliteDatabase(db));
+export async function initDb(connectionString: string): Promise<void> {
+  pool = new Pool({ connectionString, max: 5, idleTimeoutMillis: 30000 });
+
+  // Run schema migration
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const schemaPath = join(__dirname, "schema.pg.sql");
+
+  if (existsSync(schemaPath)) {
+    const schema = readFileSync(schemaPath, "utf-8");
+    const statements = schema.split(";").filter(s => s.trim().length > 0);
+    for (const stmt of statements) {
+      try { await pool.query(stmt + ";"); } catch (err) {
+        console.error("Schema migration error:", err);
+      }
+    }
+  }
+
+  setDb(new PgDatabase());
 }
 
 export function closeDb(): void {
-  if (db) db.close();
+  pool?.end().catch(() => {});
+  pool = null;
 }
 
-// Re-export for backward compatibility during migration
-export { getDb } from "./interface";
+export { getDb } from "./interface.js";

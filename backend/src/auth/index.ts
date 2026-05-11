@@ -3,8 +3,8 @@ import { SignJWT, jwtVerify } from "jose";
 import { verifyToken } from "@clerk/backend";
 import { hash, verify } from "argon2";
 import { randomBytes } from "crypto";
-import { getDb } from "../database";
-import { logger } from "../logger";
+import { getDb } from "../database/index.js";
+import { logger } from "../logger.js";
 
 if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET environment variable is required");
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
@@ -28,22 +28,22 @@ export async function createRefreshToken(userId: string): Promise<string> {
   const token = randomBytes(40).toString("hex");
   const tokenHash = await hash(token);
   const db = getDb();
-  db.prepare(
-    "INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES (?, ?, datetime('now', ?))"
+  await db.prepare(
+    "INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES (?, ?, NOW() + INTERVAL '7 days')"
   ).run(userId, tokenHash, `${REFRESH_TOKEN_TTL_MS / 1000} seconds`);
   return token;
 }
 
 export async function verifyRefreshToken(token: string): Promise<string | null> {
   const db = getDb();
-  const rows = db.prepare(
-    "SELECT * FROM refresh_tokens WHERE revoked = 0 AND expires_at > datetime('now')"
+  const rows = await db.prepare(
+    "SELECT * FROM refresh_tokens WHERE revoked = 0 AND expires_at > NOW()"
   ).all() as { id: string; user_id: string; token_hash: string }[];
 
   for (const row of rows) {
-    if (await verify(row.token_hash, token)) {
-      db.prepare("UPDATE refresh_tokens SET revoked = 1 WHERE id = ?").run(row.id);
-      return row.user_id;
+      if (await verify(row.token_hash, token)) {
+        await db.prepare("UPDATE refresh_tokens SET revoked = 1 WHERE id = ?").run(row.id);
+        return row.user_id;
     }
   }
   return null;
@@ -94,7 +94,7 @@ export function authRouter(): Router {
       }
       const db = getDb();
       const password_hash = await hash(password);
-      db.prepare("INSERT INTO users (email, password_hash) VALUES (?, ?)").run(email, password_hash);
+      await db.prepare("INSERT INTO users (email, password_hash) VALUES (?, ?)").run(email, password_hash);
       res.status(201).json({ ok: true });
     } catch (err: any) {
       if (err?.code === "SQLITE_CONSTRAINT_UNIQUE") {
@@ -110,7 +110,7 @@ export function authRouter(): Router {
     try {
       const { email, password } = req.body;
       const db = getDb();
-      const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as any;
+      const user = await db.prepare("SELECT * FROM users WHERE email = ?").get(email) as any;
       if (!user || !(await verify(user.password_hash, password))) {
         res.status(401).json({ error: "Invalid email or password" });
         return;
@@ -132,7 +132,7 @@ export function authRouter(): Router {
       const userId = await verifyRefreshToken(refreshToken);
       if (!userId) { res.status(401).json({ error: "Invalid or expired refresh token" }); return; }
       const db = getDb();
-      const user = db.prepare("SELECT * FROM users WHERE id = ?").get(userId) as any;
+      const user = await db.prepare("SELECT * FROM users WHERE id = ?").get(userId) as any;
       if (!user) { res.status(401).json({ error: "User not found" }); return; }
       const payload: AuthPayload = { sub: user.id, email: user.email };
       const accessToken = await createAccessToken(payload);
@@ -149,10 +149,10 @@ export function authRouter(): Router {
       const { refreshToken } = req.body;
       if (refreshToken) {
         const db = getDb();
-        const rows = db.prepare("SELECT * FROM refresh_tokens WHERE revoked = 0").all() as any[];
+        const rows = await db.prepare("SELECT * FROM refresh_tokens WHERE revoked = 0").all() as any[];
         for (const row of rows) {
           if (await verify(row.token_hash, refreshToken)) {
-            db.prepare("UPDATE refresh_tokens SET revoked = 1 WHERE id = ?").run(row.id);
+            await db.prepare("UPDATE refresh_tokens SET revoked = 1 WHERE id = ?").run(row.id);
             break;
           }
         }

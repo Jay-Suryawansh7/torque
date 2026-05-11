@@ -1,15 +1,15 @@
-import { getDb } from "../database";
+import { getDb } from "../database/index.js";
 import { v4 as uuid } from "uuid";
-import type { Workflow, WorkflowRun, FlowNode } from "../types";
-import type { ExecutionContext } from "../core/interfaces/IConnector";
-import { NodeType } from "../types";
-import { runAgentLoop } from "../agent/harness";
-import { MCPRegistry } from "../mcp/MCPRegistry";
-import { logger } from "../logger";
-import { getConnector } from "../connectors/registry";
-import { getSkill } from "../skills/registry";
-import { CredentialService } from "./credential-service";
-import type { OperationOutput } from "../core/interfaces/IConnector";
+import type { Workflow, WorkflowRun, FlowNode } from "../types.js";
+import type { ExecutionContext } from "../core/interfaces/IConnector.js";
+import { NodeType } from "../types.js";
+import { runAgentLoop } from "../agent/harness.js";
+import { MCPRegistry } from "../mcp/MCPRegistry.js";
+import { logger } from "../logger.js";
+import { getConnector } from "../connectors/registry.js";
+import { getSkill } from "../skills/registry.js";
+import { CredentialService } from "./credential-service.js";
+import type { OperationOutput } from "../core/interfaces/IConnector.js";
 
 // ── Real-time event emitter (wired to socket.io from index.ts) ──
 let _emit: ((runId: string, event: string, data: unknown) => void) | null = null;
@@ -17,9 +17,9 @@ export function setEmitter(fn: (runId: string, event: string, data: unknown) => 
 
 function emit(runId: string, event: string, data: unknown) { try { _emit?.(runId, event, data); } catch (err) { logger.error({ err, runId, event }, "emit failed"); } }
 
-function addLog(runId: string, nodeId: string | null, level: string, message: string, data?: unknown) {
+async function addLog(runId: string, nodeId: string | null, level: string, message: string, data?: unknown) {
   const db = getDb();
-  db.prepare("INSERT INTO run_logs (run_id, node_id, level, message, data) VALUES (?,?,?,?,?)")
+  await db.prepare("INSERT INTO run_logs (run_id, node_id, level, message, data) VALUES (?,?,?,?,?)")
     .run(runId, nodeId, level, message, JSON.stringify(data || {}));
   emit(runId, "log", { timestamp: new Date().toISOString(), nodeId, level, message });
 }
@@ -27,12 +27,12 @@ function addLog(runId: string, nodeId: string | null, level: string, message: st
 export class WorkflowEngine {
   async runWorkflow(workflowId: string, userId: string): Promise<WorkflowRun> {
     const db = getDb();
-    const wfRow = db.prepare("SELECT * FROM workflows WHERE id = ? AND user_id = ?").get(workflowId, userId) as any;
+    const wfRow = await db.prepare("SELECT * FROM workflows WHERE id = ? AND user_id = ?").get(workflowId, userId) as any;
     if (!wfRow) throw new Error(`Workflow not found`);
     const workflow: Workflow = { id: wfRow.id, name: wfRow.name, nodes: JSON.parse(wfRow.definition || "{}").nodes || [], edges: JSON.parse(wfRow.definition || "{}").edges || [], active: wfRow.is_active === 1 };
 
     const runId = uuid();
-    db.prepare("INSERT INTO workflow_runs (id, workflow_id, user_id, status, trigger_source, started_at) VALUES (?,?,?,'running','manual',datetime('now'))").run(runId, workflowId, userId);
+    await db.prepare("INSERT INTO workflow_runs (id, workflow_id, user_id, status, trigger_source, started_at) VALUES (?,?,?,'running','manual',NOW())").run(runId, workflowId, userId);
     const startedAt = Date.now();
     const run: WorkflowRun = { id: runId, workflow_id: workflowId, status: "running", started_at: new Date().toISOString(), finished_at: "", logs: [], error: null };
 
@@ -70,7 +70,7 @@ export class WorkflowEngine {
 
       async function executeNode(node: FlowNode): Promise<void> {
         const startedNodeAt = Date.now();
-        addLog(runId, node.id, "info", `▶ Executing: ${node.config.label || node.type}`);
+        await addLog(runId, node.id, "info", `▶ Executing: ${node.config.label || node.type}`);
 
         // Gather upstream inputs
         const upstreamIds = upstreamMap[node.id] || [];
@@ -98,11 +98,11 @@ export class WorkflowEngine {
           if (!error) {
             outputs[node.id] = result;
             nodeStatuses[node.id] = "completed";
-            db.prepare("INSERT INTO node_executions (run_id, node_id, node_name, status, input, output, started_at, completed_at, duration_ms) VALUES (?,?,?,'completed',?,?,?,datetime('now'),?)")
+            await db.prepare("INSERT INTO node_executions (run_id, node_id, node_name, status, input, output, started_at, completed_at, duration_ms) VALUES (?,?,?,'completed',?,?,?,NOW(),?)")
               .run(runId, node.id, node.config.label || node.type,
                 JSON.stringify(input).slice(0, 10000), JSON.stringify(result).slice(0, 10000),
                 new Date(startedNodeAt).toISOString(), dur);
-            addLog(runId, node.id, "info", `✓ Completed (${dur}ms)`);
+            await addLog(runId, node.id, "info", `✓ Completed (${dur}ms)`);
             emit(runId, "node:completed", { nodeId: node.id, output: result });
             return;
           }
@@ -110,16 +110,16 @@ export class WorkflowEngine {
           nodeErrors[node.id] = error;
           if (retriesLeft > 0) {
             retriesLeft--;
-            addLog(runId, node.id, "warn", `↻ Retrying (${retriesLeft} left): ${error}`);
+            await addLog(runId, node.id, "warn", `↻ Retrying (${retriesLeft} left): ${error}`);
             await new Promise(r => setTimeout(r, 1000 * (3 - retriesLeft)));
             continue;
           }
 
-          db.prepare("INSERT INTO node_executions (run_id, node_id, node_name, status, input, output, error, started_at, completed_at, duration_ms) VALUES (?,?,?,'failed',?,?,?,?,datetime('now'),?)")
+          await db.prepare("INSERT INTO node_executions (run_id, node_id, node_name, status, input, output, error, started_at, completed_at, duration_ms) VALUES (?,?,?,'failed',?,?,?,?,NOW(),?)")
             .run(runId, node.id, node.config.label || node.type,
               JSON.stringify(input).slice(0, 10000), null, error,
               new Date(startedNodeAt).toISOString(), dur);
-          addLog(runId, node.id, "error", `✗ Failed: ${error}`);
+          await addLog(runId, node.id, "error", `✗ Failed: ${error}`);
           emit(runId, "node:failed", { nodeId: node.id, error });
 
           if (onError === "stop") throw new Error(`Node ${node.config.label || node.id} failed: ${error}`);
@@ -158,14 +158,14 @@ export class WorkflowEngine {
       let hasFail = false;
       for (const key in nodeStatuses) { if (nodeStatuses[key] === "failed") { hasFail = true; break; } }
       const finalStatus = hasFail ? "failed" : "completed";
-      db.prepare("UPDATE workflow_runs SET status=?, completed_at=datetime('now'), duration_ms=? WHERE id=?")
+      await db.prepare("UPDATE workflow_runs SET status=?, completed_at=NOW(), duration_ms=? WHERE id=?")
         .run(finalStatus, Date.now() - startedAt, runId);
       run.status = finalStatus;
       if (finalStatus === "failed") run.error = "One or more nodes failed";
 
     } catch (err) {
       const msg = String(err);
-      db.prepare("UPDATE workflow_runs SET status='failed', error=?, completed_at=datetime('now') WHERE id=?").run(msg, runId);
+      await db.prepare("UPDATE workflow_runs SET status='failed', error=?, completed_at=NOW() WHERE id=?").run(msg, runId);
       run.status = "failed";
       run.error = msg;
     }
@@ -206,7 +206,7 @@ async function executeNodeWithType(node: FlowNode, input: unknown, ctx: Executio
         node.config.max_tokens || 2048,
         10, skillList, input, ctx,
       );
-      for (const l of result.logs) addLog(ctx.runId, node.id, "info", `${l.step}: ${l.detail}`);
+      for (const l of result.logs) await addLog(ctx.runId, node.id, "info", `${l.step}: ${l.detail}`);
       return result.output;
     }
 

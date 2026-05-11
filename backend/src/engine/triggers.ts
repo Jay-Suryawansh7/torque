@@ -1,9 +1,9 @@
 import { Router, type Request, type Response } from "express";
 import rateLimit from "express-rate-limit";
-import { getDb } from "../database";
-import { enqueueWorkflowRun } from "./workflow-engine";
+import { getDb } from "../database/index.js";
+import { enqueueWorkflowRun } from "./workflow-engine.js";
 import { randomBytes, createHmac, timingSafeEqual as tsEqual } from "crypto";
-import { logger } from "../logger";
+import { logger } from "../logger.js";
 
 const SENSITIVE_HEADERS = new Set(["authorization", "cookie", "set-cookie", "x-api-key", "x-auth-token", "proxy-authorization"]);
 
@@ -26,7 +26,7 @@ export function webhookRouter(): Router {
     try {
       const { workflowId, secret } = req.params;
       const db = getDb();
-      const wf = db.prepare("SELECT * FROM workflows WHERE id = ? AND is_active = 1").get(workflowId) as any;
+      const wf = await db.prepare("SELECT * FROM workflows WHERE id = ? AND is_active = 1").get(workflowId) as any;
       if (!wf) { res.status(404).json({ error: "Workflow not found or inactive" }); return; }
 
       // Verify webhook secret using timingSafeEqual
@@ -55,7 +55,7 @@ export function webhookRouter(): Router {
 
       // Store webhook event (sensitive headers redacted)
       const eventId = randomBytes(8).toString("hex");
-      db.prepare("INSERT INTO webhook_events (id, workflow_id, payload, headers) VALUES (?,?,?,?)")
+      await db.prepare("INSERT INTO webhook_events (id, workflow_id, payload, headers) VALUES (?,?,?,?)")
         .run(eventId, workflowId, JSON.stringify(req.body), JSON.stringify(sanitizeHeaders(req.headers as Record<string, unknown>)));
 
       // Enqueue run asynchronously
@@ -76,9 +76,9 @@ import cron from "node-cron";
 
 const scheduledJobs = new Map<string, cron.ScheduledTask>();
 
-export function startScheduler(): void {
+export async function startScheduler(): Promise<void> {
   const db = getDb();
-  const activeWorkflows = db.prepare("SELECT * FROM workflows WHERE is_active = 1 AND trigger_type = 'cron'").all() as any[];
+  const activeWorkflows = await db.prepare("SELECT * FROM workflows WHERE is_active = 1 AND trigger_type = 'cron'").all() as any[];
 
   for (const wf of activeWorkflows) {
     const config = JSON.parse(wf.trigger_config || "{}");

@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { BaseConnector } from "./BaseConnector";
-import { ConnectorError } from "../core/ConnectorError";
-import type { IOperation, OperationOutput, ExecutionContext, ConnectionTestResult, AuthConfig } from "../core/interfaces/IConnector";
+import { BaseConnector } from "./BaseConnector.js";
+import { ConnectorError } from "../core/ConnectorError.js";
+import type { IOperation, OperationOutput, ExecutionContext, ConnectionTestResult, AuthConfig } from "../core/interfaces/IConnector.js";
 
 function encodeBase64Url(str: string): string {
   return Buffer.from(str).toString("base64url");

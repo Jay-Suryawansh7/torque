@@ -1,7 +1,7 @@
 import { z } from "zod";
 import vm from "vm";
-import { BaseConnector } from "./BaseConnector";
-import type { IOperation, OperationOutput, ExecutionContext, ConnectionTestResult, AuthConfig } from "../core/interfaces/IConnector";
+import { BaseConnector } from "./BaseConnector.js";
+import type { IOperation, OperationOutput, ExecutionContext, ConnectionTestResult, AuthConfig } from "../core/interfaces/IConnector.js";
 
 const inputSchema = z.object({
   language: z.enum(["javascript", "python", "typescript"]).default("javascript"),

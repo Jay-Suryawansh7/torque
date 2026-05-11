@@ -1,5 +1,5 @@
-import { ConnectorStore, MCPServerStore, SkillStore, CredentialStore } from "./stores";
-import { WorkflowService } from "./workflow-service";
+import { ConnectorStore, MCPServerStore, SkillStore, CredentialStore } from "./stores.js";
+import { WorkflowService } from "./workflow-service.js";
 
 export class MCPRegistry {
   private connectors: ConnectorStore;
@@ -107,12 +107,12 @@ export class MCPRegistry {
     return resources;
   }
 
-  readResource(uri: string): Record<string, unknown> | undefined {
+  async readResource(uri: string): Promise<Record<string, unknown> | undefined> {
     if (uri === "system://memory") {
       return { content: JSON.stringify({ note: "Memory store ready" }, null, 2) };
     }
     if (uri === "system://config") {
-      const wfResult = this.svc.list("", 1, 0);
+      const wfResult = await this.svc.list("", 1, 0);
       return { content: JSON.stringify({
         version: "0.1.0",
         mcp_servers: this.mcpServers.list().length,
@@ -120,11 +120,11 @@ export class MCPRegistry {
       }, null, 2) };
     }
     if (uri === "system://workflows") {
-      const wfResult = this.svc.list("", 100, 0);
+      const wfResult = await this.svc.list("", 100, 0);
       return { content: JSON.stringify(wfResult.workflows.map((w: any) => ({ id: w.id, name: w.name, nodes: w.nodes.length })), null, 2) };
     }
     if (uri === "system://logs") {
-      const runsResult = this.svc.listRuns(undefined, undefined, 10, 0);
+      const runsResult = await this.svc.listRuns(undefined, undefined, 10, 0);
       return { content: JSON.stringify(runsResult.runs.map((r: any) => ({ id: r.id, workflow_id: r.workflow_id, status: r.status, started: r.started_at })), null, 2) };
     }
 

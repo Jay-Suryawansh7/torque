@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { BaseConnector } from "./BaseConnector";
-import { ConnectorError } from "../core/ConnectorError";
-import type { IOperation, OperationOutput, ExecutionContext, ConnectionTestResult, AuthConfig } from "../core/interfaces/IConnector";
+import { BaseConnector } from "./BaseConnector.js";
+import { ConnectorError } from "../core/ConnectorError.js";
+import type { IOperation, OperationOutput, ExecutionContext, ConnectionTestResult, AuthConfig } from "../core/interfaces/IConnector.js";
 
 async function ghFetch(token: string, method: string, path: string, body?: unknown): Promise<any> {
   const res = await fetch(`https://api.github.com${path}`, {

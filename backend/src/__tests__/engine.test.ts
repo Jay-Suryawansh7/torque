@@ -4,7 +4,7 @@ import { getDb } from "../database";
 
 function makeUser(id: string, email: string) {
   const db = getDb();
-  db.prepare("INSERT OR IGNORE INTO users (id, email, password_hash) VALUES (?,?,?)").run(id, email, "hash");
+  db.prepare("INSERT INTO users (id, email, password_hash) VALUES (?,?,?)").run(id, email, "hash");
 }
 
 function makeFullConfig(overrides: Record<string, unknown> = {}) {

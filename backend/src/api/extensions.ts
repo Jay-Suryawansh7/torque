@@ -1,18 +1,18 @@
 import { Router, type Request, type Response } from "express";
 import { v4 as uuid } from "uuid";
-import { LLMProvider } from "../types";
-import { CredentialStore, ConnectorStore, MCPServerStore, SkillStore, OAuthHandler } from "../engine/stores";
-import { MCPRegistry } from "../engine/mcp-registry";
-import { CredentialService } from "../engine/credential-service";
-import { listConnectors, getConnector, getOperations, getOperation } from "../connectors/registry";
-import { listSkills, getSkill } from "../skills/registry";
-import { MCPRegistry as MCPRegistryV2, MCP_MARKETPLACE } from "../mcp/MCPRegistry";
-import { CredentialSchema, ConnectorSchema, MCPServerSchema } from "../schemas/extension.schema";
-import { validate } from "../schemas/validate";
-import { authMiddleware } from "../auth";
-import { logger } from "../logger";
+import { LLMProvider } from "../types.js";
+import { CredentialStore, ConnectorStore, MCPServerStore, SkillStore, OAuthHandler } from "../engine/stores.js";
+import { MCPRegistry } from "../engine/mcp-registry.js";
+import { CredentialService } from "../engine/credential-service.js";
+import { listConnectors, getConnector, getOperations, getOperation } from "../connectors/registry.js";
+import { listSkills, getSkill } from "../skills/registry.js";
+import { MCPRegistry as MCPRegistryV2, MCP_MARKETPLACE } from "../mcp/MCPRegistry.js";
+import { CredentialSchema, ConnectorSchema, MCPServerSchema } from "../schemas/extension.schema.js";
+import { validate } from "../schemas/validate.js";
+import { authMiddleware } from "../auth/index.js";
+import { logger } from "../logger.js";
 import { z } from "zod";
-import { wrap } from "./wrap";
+import { wrap } from "./wrap.js";
 
 export function extensionsRouter(dataDir: string): Router {
   const router = Router();
@@ -64,7 +64,7 @@ export function extensionsRouter(dataDir: string): Router {
     const connectorId = req.query.connectorId as string || "";
     const connector = getConnector(connectorId);
     if (!connector) { res.status(404).json({ error: "Connector not found" }); return; }
-    const decrypted = credSvc.getDecrypted(req.params.id, (req as any).user.id);
+    const decrypted = await credSvc.getDecrypted(req.params.id, (req as any).user.id);
     if (!decrypted) { res.status(404).json({ error: "Credential not found" }); return; }
     const testResult = await connector.testConnection(decrypted);
     res.json(testResult);
@@ -143,9 +143,9 @@ export function extensionsRouter(dataDir: string): Router {
   router.get("/mcp/tools", authMiddleware, wrap((_req: Request, res: Response) => { res.json(mcp.listTools()); }));
   router.get("/mcp/resources", authMiddleware, wrap((_req: Request, res: Response) => { res.json(mcp.listResources()); }));
 
-  router.get("/mcp/resources/*", authMiddleware, wrap((req: Request, res: Response) => {
+  router.get("/mcp/resources/*", authMiddleware, wrap(async (req: Request, res: Response) => {
     const uri = req.params[0] || req.path.replace("/api/mcp/resources/", "");
-    const result = mcp.readResource(uri);
+    const result = await mcp.readResource(uri);
     if (!result) { res.status(404).json({ detail: `Resource not found: ${uri}` }); return; }
     res.json(result);
   }));

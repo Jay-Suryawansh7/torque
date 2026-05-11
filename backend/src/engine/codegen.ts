@@ -1,5 +1,5 @@
-import type { Workflow, FlowNode, NodeConfig } from "../types";
-import { NodeType } from "../types";
+import type { Workflow, FlowNode, NodeConfig } from "../types.js";
+import { NodeType } from "../types.js";
 
 export function generateTS(workflow: Workflow): string {
   const imports: string[] = ['import "dotenv/config";'];

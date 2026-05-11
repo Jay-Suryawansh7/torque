@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { BaseConnector } from "./BaseConnector";
-import type { IOperation, OperationOutput, ExecutionContext, ConnectionTestResult, AuthConfig } from "../core/interfaces/IConnector";
+import { BaseConnector } from "./BaseConnector.js";
+import type { IOperation, OperationOutput, ExecutionContext, ConnectionTestResult, AuthConfig } from "../core/interfaces/IConnector.js";
 
 const setOp: IOperation = {
   id: "set",

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { NodeType } from "../types";
+import { NodeType } from "../types.js";
 
 const PositionSchema = z.object({ x: z.number(), y: z.number() });
 

@@ -3,9 +3,9 @@
  * Each returns a ConnectorError directing users to the API documentation.
  */
 import { z } from "zod";
-import { BaseConnector } from "./BaseConnector";
-import { ConnectorError } from "../core/ConnectorError";
-import type { IOperation, ConnectionTestResult, AuthConfig, IConnector } from "../core/interfaces/IConnector";
+import { BaseConnector } from "./BaseConnector.js";
+import { ConnectorError } from "../core/ConnectorError.js";
+import type { IOperation, ConnectionTestResult, AuthConfig, IConnector } from "../core/interfaces/IConnector.js";
 
 function unimplementedOp(id: string, name: string, description: string, docsUrl: string): IOperation {
   return {

@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { BaseConnector } from "./BaseConnector";
-import { ConnectorError } from "../core/ConnectorError";
-import type { IOperation, OperationOutput, ConnectionTestResult, AuthConfig } from "../core/interfaces/IConnector";
+import { BaseConnector } from "./BaseConnector.js";
+import { ConnectorError } from "../core/ConnectorError.js";
+import type { IOperation, OperationOutput, ConnectionTestResult, AuthConfig } from "../core/interfaces/IConnector.js";
 
 const chatOp: IOperation = {
   id: "chat_completion", name: "Chat Completion", description: "Generate text using Anthropic Claude", type: "action",

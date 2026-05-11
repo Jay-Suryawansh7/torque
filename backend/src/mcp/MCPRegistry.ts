@@ -1,6 +1,6 @@
-import { getDb } from "../database";
+import { getDb } from "../database/index.js";
 import { v4 as uuid } from "uuid";
-import { logger } from "../logger";
+import { logger } from "../logger.js";
 
 const BLOCKED_HOSTS = /^(127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|0\.0\.0\.0|localhost|::1)/i;
 
@@ -32,32 +32,33 @@ interface MCPServerConfig {
 const connections = new Map<string, { connected: boolean; tools: Record<string, unknown>[] }>();
 
 export class MCPRegistry {
-  list(userId: string): MCPServerConfig[] {
+  async list(userId: string): Promise<MCPServerConfig[]> {
     const db = getDb();
-    return db.prepare("SELECT * FROM mcp_servers WHERE user_id = ? ORDER BY created_at DESC").all(userId) as MCPServerConfig[];
+    return await db.prepare("SELECT * FROM mcp_servers WHERE user_id = ? ORDER BY created_at DESC").all(userId) as MCPServerConfig[];
   }
 
-  get(id: string, userId: string): MCPServerConfig | undefined {
+  async get(id: string, userId: string): Promise<MCPServerConfig | undefined> {
     const db = getDb();
-    return db.prepare("SELECT * FROM mcp_servers WHERE id = ? AND user_id = ?").get(id, userId) as MCPServerConfig | undefined;
+    return await db.prepare("SELECT * FROM mcp_servers WHERE id = ? AND user_id = ?").get(id, userId) as MCPServerConfig | undefined;
   }
 
-  save(input: { name: string; url: string; transport: string }, userId: string): MCPServerConfig {
+  async save(input: { name: string; url: string; transport: string }, userId: string): Promise<MCPServerConfig> {
     const db = getDb();
     const id = uuid();
-    db.prepare("INSERT INTO mcp_servers (id, user_id, name, url, transport) VALUES (?,?,?,?,?)")
+    await db.prepare("INSERT INTO mcp_servers (id, user_id, name, url, transport) VALUES (?,?,?,?,?)")
       .run(id, userId, input.name, input.url, input.transport);
-    return this.get(id, userId)!;
+    const saved = await this.get(id, userId);
+    return saved as MCPServerConfig;
   }
 
-  delete(id: string, userId: string): boolean {
+  async delete(id: string, userId: string): Promise<boolean> {
     const db = getDb();
     connections.delete(id);
-    return db.prepare("DELETE FROM mcp_servers WHERE id = ? AND user_id = ?").run(id, userId).changes > 0;
+    return (await db.prepare("DELETE FROM mcp_servers WHERE id = ? AND user_id = ?").run(id, userId)).changes > 0;
   }
 
   async connect(serverId: string, userId: string): Promise<boolean> {
-    const server = this.get(serverId, userId);
+    const server = await this.get(serverId, userId);
     if (!server) return false;
     try {
       validateUrl(server.url); // SSRF protection
@@ -66,7 +67,7 @@ export class MCPRegistry {
         if (!res.ok) throw new Error(`SSE connect failed: ${res.status}`);
         const tools = await res.json();
         const db = getDb();
-        db.prepare("UPDATE mcp_servers SET status = 'connected', tools = ?, last_ping_at = datetime('now') WHERE id = ?")
+        await db.prepare("UPDATE mcp_servers SET status = 'connected', tools = ?, last_ping_at = NOW() WHERE id = ?")
           .run(JSON.stringify(tools.tools || []), serverId);
         connections.set(serverId, { connected: true, tools: tools.tools || [] });
         return true;
@@ -76,7 +77,7 @@ export class MCPRegistry {
       return true;
     } catch (err) {
       const db = getDb();
-      db.prepare("UPDATE mcp_servers SET status = 'error' WHERE id = ?").run(serverId);
+      await db.prepare("UPDATE mcp_servers SET status = 'error' WHERE id = ?").run(serverId);
       logger.error({ err, serverId }, "MCP connect failed");
       return false;
     }
@@ -85,12 +86,12 @@ export class MCPRegistry {
   async disconnect(serverId: string, userId: string): Promise<boolean> {
     const db = getDb();
     connections.delete(serverId);
-    db.prepare("UPDATE mcp_servers SET status = 'disconnected' WHERE id = ? AND user_id = ?").run(serverId, userId);
+    await db.prepare("UPDATE mcp_servers SET status = 'disconnected' WHERE id = ? AND user_id = ?").run(serverId, userId);
     return true;
   }
 
   async callTool(serverId: string, userId: string, toolName: string, args: Record<string, unknown>): Promise<unknown> {
-    const server = this.get(serverId, userId);
+    const server = await this.get(serverId, userId);
     if (!server) throw new Error("MCP server not found");
     if (!connections.has(serverId)) throw new Error("MCP server not connected");
 
@@ -104,7 +105,7 @@ export class MCPRegistry {
 
   async reconnectLoop(): Promise<void> {
     const db = getDb();
-    const errored = db.prepare("SELECT * FROM mcp_servers WHERE status IN ('error', 'disconnected')").all() as MCPServerConfig[];
+    const errored = await db.prepare("SELECT * FROM mcp_servers WHERE status IN ('error', 'disconnected')").all() as MCPServerConfig[];
     for (const server of errored) {
       try {
         await this.connect(server.id, server.userId);

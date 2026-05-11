@@ -1,7 +1,7 @@
-import type { FlowNode } from "../types";
-import { NodeType } from "../types";
-import type { ExecutionContext } from "../core/interfaces/IConnector";
-import { runAgentLoop } from "../agent/harness";
+import type { FlowNode } from "../types.js";
+import { NodeType } from "../types.js";
+import type { ExecutionContext } from "../core/interfaces/IConnector.js";
+import { runAgentLoop } from "../agent/harness.js";
 
 export class AgentRunner {
   async runNode(node: FlowNode, input: unknown, ctx: ExecutionContext): Promise<{ output: string; logs: unknown[] }> {

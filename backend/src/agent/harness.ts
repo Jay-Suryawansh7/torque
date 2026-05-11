@@ -1,7 +1,7 @@
-import type { LogEntry } from "../types";
-import { getSkill } from "../skills/registry";
-import type { IAgentSkill, SkillInput } from "../core/interfaces/IAgentSkill";
-import type { ExecutionContext } from "../core/interfaces/IConnector";
+import type { LogEntry } from "../types.js";
+import { getSkill } from "../skills/registry.js";
+import type { IAgentSkill, SkillInput } from "../core/interfaces/IAgentSkill.js";
+import type { ExecutionContext } from "../core/interfaces/IConnector.js";
 
 interface LLMMessage {
   role: "system" | "user" | "assistant" | "tool";

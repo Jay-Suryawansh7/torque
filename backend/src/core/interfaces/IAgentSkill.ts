@@ -1,5 +1,5 @@
 import type { ZodSchema } from "zod";
-import type { ExecutionContext } from "./IConnector";
+import type { ExecutionContext } from "./IConnector.js";
 
 export interface SkillInput {
   [key: string]: unknown;

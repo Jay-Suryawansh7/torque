@@ -1,5 +1,5 @@
-import type { IAgentSkill, SkillInput, SkillOutput } from "../core/interfaces/IAgentSkill";
-import type { ExecutionContext } from "../core/interfaces/IConnector";
+import type { IAgentSkill, SkillInput, SkillOutput } from "../core/interfaces/IAgentSkill.js";
+import type { ExecutionContext } from "../core/interfaces/IConnector.js";
 import { z } from "zod";
 import { evaluate } from "mathjs";
 

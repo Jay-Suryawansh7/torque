@@ -1,4 +1,4 @@
-import type { IConnector, IOperation, ExecutionContext, OperationOutput, ConnectionTestResult, AuthConfig } from "../core/interfaces/IConnector";
+import type { IConnector, IOperation, ExecutionContext, OperationOutput, ConnectionTestResult, AuthConfig } from "../core/interfaces/IConnector.js";
 
 export abstract class BaseConnector implements IConnector {
   abstract id: string;

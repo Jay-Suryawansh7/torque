@@ -1,7 +1,7 @@
 import { randomBytes, createCipheriv, createDecipheriv } from "crypto";
 import { v4 as uuid } from "uuid";
-import { getDb } from "../database";
-import { logger } from "../logger";
+import { getDb } from "../database/index.js";
+import { logger } from "../logger.js";
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 16;
@@ -54,9 +54,9 @@ export interface CredentialRecord {
 }
 
 export class CredentialService {
-  list(userId: string): CredentialRecord[] {
+  async list(userId: string): Promise<CredentialRecord[]> {
     const db = getDb();
-    const rows = db.prepare(
+    const rows = await db.prepare(
       "SELECT * FROM credentials WHERE user_id = ? ORDER BY updated_at DESC"
     ).all(userId) as any[];
     return rows.map(r => ({
@@ -70,9 +70,9 @@ export class CredentialService {
     }));
   }
 
-  get(id: string, userId: string): CredentialRecord | null {
+  async get(id: string, userId: string): Promise<CredentialRecord | null> {
     const db = getDb();
-    const r = db.prepare("SELECT * FROM credentials WHERE id = ? AND user_id = ?").get(id, userId) as any;
+    const r = await db.prepare("SELECT * FROM credentials WHERE id = ? AND user_id = ?").get(id, userId) as any;
     if (!r) return null;
     return {
       id: r.id, userId: r.user_id, connectorId: r.connector_id,
@@ -85,11 +85,11 @@ export class CredentialService {
     };
   }
 
-  getDecrypted(id: string, userId: string): Record<string, unknown> | null {
+  async getDecrypted(id: string, userId: string): Promise<Record<string, unknown> | null> {
     const db = getDb();
-    const r = db.prepare("SELECT * FROM credentials WHERE id = ? AND user_id = ?").get(id, userId) as any;
+    const r = await db.prepare("SELECT * FROM credentials WHERE id = ? AND user_id = ?").get(id, userId) as any;
     if (!r) return null;
-    db.prepare("UPDATE credentials SET last_used_at = datetime('now') WHERE id = ?").run(id);
+    await db.prepare("UPDATE credentials SET last_used_at = NOW() WHERE id = ?").run(id);
     try {
       return JSON.parse(decrypt(r.data));
     } catch (err) {
@@ -98,28 +98,29 @@ export class CredentialService {
     }
   }
 
-  save(input: { name: string; connectorId: string; data: Record<string, unknown>; authType: string }, userId: string): CredentialRecord {
+  async save(input: { name: string; connectorId: string; data: Record<string, unknown>; authType: string }, userId: string): Promise<CredentialRecord> {
     const db = getDb();
     const encrypted = encrypt(JSON.stringify(input.data));
     const id = uuid();
-    db.prepare(
+    await db.prepare(
       "INSERT INTO credentials (id, user_id, connector_id, name, data, auth_type) VALUES (?,?,?,?,?,?)"
     ).run(id, userId, input.connectorId, input.name, encrypted, input.authType);
-    return this.get(id, userId)!;
+    const saved = await this.get(id, userId);
+    return saved!;
   }
 
-  update(id: string, userId: string, data: Record<string, unknown>): boolean {
+  async update(id: string, userId: string, data: Record<string, unknown>): Promise<boolean> {
     const db = getDb();
     const encrypted = encrypt(JSON.stringify(data));
-    const result = db.prepare(
-      "UPDATE credentials SET data = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?"
+    const result = await db.prepare(
+      "UPDATE credentials SET data = ?, updated_at = NOW() WHERE id = ? AND user_id = ?"
     ).run(encrypted, id, userId);
     return result.changes > 0;
   }
 
-  delete(id: string, userId: string): boolean {
+  async delete(id: string, userId: string): Promise<boolean> {
     const db = getDb();
-    const result = db.prepare("DELETE FROM credentials WHERE id = ? AND user_id = ?").run(id, userId);
+    const result = await db.prepare("DELETE FROM credentials WHERE id = ? AND user_id = ?").run(id, userId);
     return result.changes > 0;
   }
 

@@ -2,9 +2,9 @@ import { readFileSync, writeFileSync, renameSync, existsSync, mkdirSync } from "
 import { join } from "path";
 import { v4 as uuid } from "uuid";
 import { Mutex } from "async-mutex";
-import type { Credential, Connector, MCPServer, Skill, ProviderInfo, ConnectorItem, MCPServerItem } from "../types";
-import { LLMProvider } from "../types";
-import { logger } from "../logger";
+import type { Credential, Connector, MCPServer, Skill, ProviderInfo, ConnectorItem, MCPServerItem } from "../types.js";
+import { LLMProvider } from "../types.js";
+import { logger } from "../logger.js";
 
 const ICON_CDN = "https://cdn.simpleicons.org";
 
