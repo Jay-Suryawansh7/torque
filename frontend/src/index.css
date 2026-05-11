@@ -1,0 +1,65 @@
+@import "tw-animate-css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.react-flow__node {
+  @apply rounded-xl shadow-lg border border-gray-700/50;
+}
+
+.react-flow__edge-path {
+  @apply stroke-gray-600 stroke-2;
+}
+
+.react-flow__controls {
+  @apply bg-gray-900 border border-gray-800 rounded-xl shadow-lg;
+}
+
+.react-flow__controls-button {
+  @apply bg-gray-900 border-gray-800 text-gray-400 hover:bg-gray-800 hover:text-gray-200;
+}
+
+.react-flow__background {
+  @apply bg-gray-950;
+}
+
+.react-flow__minimap {
+  @apply rounded-xl border border-gray-800 shadow-lg;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 13%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 13%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 204 92% 48%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 16%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 16%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62% 47%;
+    --success: 142 71% 45%;
+    --warning: 24 94% 53%;
+    --border: 0 0% 100% / 10%;
+    --input: 0 0% 100% / 15%;
+    --ring: 204 92% 48%;
+    --radius: 0.625rem;
+  }
+  body {
+    @apply bg-gray-950 text-gray-100;
+  }
+}

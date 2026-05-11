@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: torque-backend
+    runtime: node
+    repo: https://github.com/your-username/torque
+    branch: main
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: node dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "8000"
+      - key: DATA_DIR
+        value: /var/data/torque
+      - key: FRONTEND_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
+    disk:
+      name: torque-data
+      mountPath: /var/data/torque
+      sizeGB: 1
