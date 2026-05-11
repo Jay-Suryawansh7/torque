@@ -1,20 +1,15 @@
 import { beforeAll, afterAll } from "vitest";
-import { mkdtempSync } from "fs";
-import { join } from "path";
-import { tmpdir } from "os";
 import { initDb, closeDb } from "../database";
 
-const dataDir = mkdtempSync(join(tmpdir(), "torque-test-"));
+// Use DATABASE_URL env var for tests, or skip DB-dependent tests
+const dbUrl = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL;
 
-beforeAll(() => {
-  process.env.DATA_DIR = dataDir;
-  process.env.JWT_SECRET = "test-jwt-secret-at-least-32-characters-long!!";
-  process.env.ENCRYPTION_KEY = Buffer.from("a".repeat(32)).toString("base64");
-  process.env.FRONTEND_URL = "http://localhost:5173";
-  initDb(dataDir);
+beforeAll(async () => {
+  if (dbUrl) {
+    await initDb(dbUrl);
+  }
 });
 
 afterAll(() => {
   closeDb();
-  try { const { rmSync } = require("fs"); rmSync(dataDir, { recursive: true, force: true }); } catch {}
 });
