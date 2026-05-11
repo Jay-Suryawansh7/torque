@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import type { Node } from "@xyflow/react";
 import { ReactFlowProvider, useReactFlow } from "@xyflow/react";
 import { motion, AnimatePresence } from "motion/react";
-import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/react";
+import { Show, SignInButton, SignUpButton, UserButton, useAuth } from "@clerk/react";
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -27,6 +27,25 @@ import { apiRequest } from "./api/client";
 
 function AppContent() {
   const [page, setPage] = useState<"canvas" | "dashboard" | "credentials">("canvas");
+
+  // Gate: show Clerk login if not authenticated
+  const { isSignedIn, isLoaded } = useAuth();
+  if (!isLoaded) return <div className="h-screen w-screen bg-gray-950" />;
+  if (!isSignedIn) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-gray-950">
+        <div className="text-center">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-torque-400 to-torque-600 flex items-center justify-center text-lg font-bold text-white mx-auto mb-4">T</div>
+          <h1 className="text-xl font-semibold text-gray-100 mb-2">Torque</h1>
+          <p className="text-sm text-gray-500 mb-6">Sign in to continue</p>
+          <div className="flex items-center justify-center gap-3">
+            <SignInButton mode="modal" />
+            <SignUpButton mode="modal" />
+          </div>
+        </div>
+      </div>
+    );
+  }
   const {
     workflowId, name, setName, nodes, edges, selectedNode, setSelectedNode,
     onNodesChange, onEdgesChange, onConnect, addNode,
@@ -156,13 +175,7 @@ function AppContent() {
             {page === "canvas" && workflowId && <span className="text-[10px] text-gray-600 font-mono">{workflowId.slice(0, 8)}</span>}
           </div>
           <div className="flex items-center gap-2">
-            <Show when="signed-out">
-              <SignInButton mode="modal" />
-              <SignUpButton mode="modal" />
-            </Show>
-            <Show when="signed-in">
-              <UserButton />
-            </Show>
+            <UserButton />
             {page === "canvas" && (
               <>
               <Button onClick={() => setShowNodeCreator(true)} variant="secondary" size="sm">
