@@ -2,7 +2,7 @@ services:
   - type: web
     name: torque-backend
     runtime: node
-    repo: https://github.com/your-username/torque
+    repo: https://github.com/Jay-Suryawansh7/torque
     branch: main
     rootDir: backend
     buildCommand: npm install && npm run build
